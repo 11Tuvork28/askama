@@ -1058,11 +1058,12 @@ impl<'a, S: std::hash::BuildHasher> Generator<'a, S> {
                             expr_buf.buf, self.input.escaper
                         ),
                     };
+                    let is_cacheable = !matches!(s, Expr::Call(..));
 
                     use std::collections::hash_map::Entry;
                     let id = match expr_cache.entry(expression.clone()) {
-                        Entry::Occupied(e) => *e.get(),
-                        Entry::Vacant(e) => {
+                        Entry::Occupied(e) if is_cacheable => *e.get(),
+                        e => {
                             let id = self.named;
                             self.named += 1;
 
@@ -1071,7 +1072,10 @@ impl<'a, S: std::hash::BuildHasher> Generator<'a, S> {
                             buf_expr.write(&expression);
                             buf_expr.writeln(",")?;
 
-                            e.insert(id);
+                            if let Entry::Vacant(e) = e {
+                                e.insert(id);
+                            }
+
                             id
                         }
                     };
